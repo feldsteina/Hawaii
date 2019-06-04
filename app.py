@@ -30,13 +30,23 @@ app = Flask(__name__)
 @app.route("/")
 def index():
     message = 'Route info:\
-    Daily Precipitation Data: /api/v1.0/precipitation\n\
-    Station Data: /api/v1.0/stations\n\
-    Total Observations: /api/v1.0/tobs\n\
-    Data starting on <date> /api/v1.0/<start>\n\
-    Data between two dates: /api/v1.0/2010-01-01/<start>/<end>\n\
+    Daily Precipitation Data: <a href="/api/v1.0/precipitation">\
+        /api/v1.0/precipitation\
+    </a><br>\
+    Station Data: <a href="/api/v1.0/stations">\
+        /api/v1.0/stations\
+    </a><br >\
+    Temperature Data: <a href="/api/v1.0/tobs">\
+        /api/v1.0/tobs\
+    </a><br>\
+    Data starting on a date: <a href="/api/v1.0/2010-01-01">\
+        /api/v1.0/&lt;start&gt;\
+    </a><br>\
+    Data between two dates: <a href="/api/v1.0/2010-01-01/2017-08-23">\
+        /api/v1.0/&lt;start&gt;/&lt;end&gt;\
+    </a><br>\
     Date format should be YYYY-MM-DD'
-    return render_template("index.html", message=message)
+    return message
 
 
 @app.route("/api/v1.0/precipitation", methods=["GET"])
@@ -70,6 +80,42 @@ def stations():
 
     return jsonify(stationData)
 
+
+@app.route("/api/v1.0/tobs", methods=["GET"])
+def tobs():
+    queryResults = session.query(Measurement.date)\
+        .order_by(Measurement.date.desc()).limit(1)
+
+    data = queryResults[0][0]
+
+    newYear = data.split("-")
+
+    oldYear = []
+
+    oldYear.append(str(int(newYear[0])-1))
+    oldYear.append(newYear[1])
+    oldYear.append(newYear[2])
+
+    newYear = "-".join(newYear)
+
+    print(newYear)
+
+    oldYear = "-".join(oldYear)
+
+    print(oldYear)
+
+    queryResults = session.query(Measurement.date, Measurement.tobs)\
+        .filter(Measurement.date <= newYear)\
+        .filter(Measurement.date > oldYear)\
+        .order_by(Measurement.date)\
+        .group_by(Measurement.date)
+
+    tobsData = []
+
+    for items in queryResults:
+        tobsData.append(items)
+
+    return jsonify(tobsData)
 
 if __name__ == "__main__":
     app.run()
