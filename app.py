@@ -83,10 +83,10 @@ def stations():
 
 @app.route("/api/v1.0/tobs", methods=["GET"])
 def tobs():
-    queryResults = session.query(Measurement.date)\
+    recentDate = session.query(Measurement.date)\
         .order_by(Measurement.date.desc()).limit(1)
 
-    data = queryResults[0][0]
+    data = recentDate[0][0]
 
     newYear = data.split("-")
 
@@ -116,6 +116,48 @@ def tobs():
         tobsData.append(items)
 
     return jsonify(tobsData)
+
+
+@app.route("/api/v1.0/<start>", methods=["GET"])
+def tempStart(start):
+    queryResults = calc_temps(start, "")
+
+    tempData = []
+
+    for items in queryResults:
+        tempData.append(round(items, 2))
+
+    return jsonify(tempData)
+
+
+@app.route("/api/v1.0/<start>/<end>", methods=["GET"])
+def tempStartEnd(start, end):
+    queryResults = calc_temps(start, end)
+
+    tempData = []
+
+    for items in queryResults:
+        tempData.append(round(items, 2))
+
+    return jsonify(tempData)
+
+
+def calc_temps(start_date, end_date):
+    if (not end_date):
+        end_date = session.query(Measurement.date)\
+            .order_by(Measurement.date.desc()).limit(1)[0][0]
+    # print(end_date)
+
+    queryResults = session.query(
+        func.min(Measurement.tobs),
+        func.avg(Measurement.tobs),
+        func.max(Measurement.tobs)
+    )\
+        .filter(Measurement.date >= start_date)\
+        .filter(Measurement.date <= end_date).all()[0]
+
+    return queryResults
+
 
 if __name__ == "__main__":
     app.run()
